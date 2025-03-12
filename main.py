@@ -1,3 +1,4 @@
+
 import argparse
 
 from config import Config  # Import the Config class
@@ -28,3 +29,4 @@ if __name__ == "__main__":
     config = Config(**vars(args))
     app = MainClass(config, args.image_path)
     app.run()
+
