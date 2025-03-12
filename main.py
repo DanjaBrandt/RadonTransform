@@ -1,16 +1,30 @@
-# This is a sample Python script.
+import argparse
 
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+from config import Config  # Import the Config class
+from radon_analysis import RadonStructureDetection
+
+class MainClass:
+    def __init__(self, config: Config, image_path: str):
+        self.config = config
+        self.processor = RadonStructureDetection(config, image_path)
+
+    def run(self):
+        print(f"Running with config: {self.config}")
+        self.processor.generate()
 
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+def get_args():
+    parser = argparse.ArgumentParser(description="Provide config values")
+    parser.add_argument("--patch_size", type=int, default=50, help="Set the patch size")
+    parser.add_argument("--patch_step", type=str, default=25, help="Set the step size for patches")
+    parser.add_argument("--sigma", type=str, default=1, help="Set the sigma value for Gauss smoothing")
+    parser.add_argument("--image_path", type=str, required=True, help="Path to the image folder")
+
+    return parser.parse_args()
 
 
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    print_hi('PyCharm')
-
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+if __name__ == "__main__":
+    args = get_args()
+    config = Config(**vars(args))
+    app = MainClass(config, args.image_path)
+    app.run()
