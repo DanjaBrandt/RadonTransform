@@ -16,3 +16,6 @@ __pycache__/
 # Ignore environment and system files
 .DS_Store
 Thumbs.db
+
+# Ignore test data
+.data_test/
