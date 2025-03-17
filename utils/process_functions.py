@@ -5,8 +5,8 @@ from PIL import Image
 import matplotlib.pyplot as plt
 from typing import Callable
 
-#from .logging_config import logger
-
+#from logger_config import get_logger
+from utils import functions
 
 def import_data(path: str, normalize: bool = True, max_value: int = 255, min_value: int = 0) -> np.ndarray:
     """
@@ -84,8 +84,11 @@ def process_images_in_folder(input_folder: str, process_function: Callable, proc
     :type normalize: object
     """
 
+    #root_output_folder = "outputs"
     base_output_folder = f"{process_key}_output"
-    output_folder = get_unique_output_folder(base_output_folder)
+    output_folder = functions.get_unique_name(base_output_folder)
+    #output_folder = os.path.join(root_output_folder, functions.get_unique_name(base_output_folder))
+    print(output_folder)
     for root, _, files in os.walk(input_folder):
 
         for file in files:
@@ -96,18 +99,21 @@ def process_images_in_folder(input_folder: str, process_function: Callable, proc
             if image_array is None:
                 continue  # Skip if not a valid image
 
-            processed_image = process_function(image_array)
+            config, detected_points = process_function(image_array)
+            results_name = f"results_{os.path.splitext(file)[0]}"
+            config_name = f"config_{os.path.splitext(file)[0]}"
 
             # Save the processed image if process_key is not display
             if process_key != "display_input":
                 # Preserve subfolder structure
                 relative_path = os.path.relpath(root, input_folder)
                 output_dir = os.path.join(output_folder, relative_path)
-                #os.makedirs(output_dir, exist_ok=True)
+                os.makedirs(output_dir, exist_ok=True)
                 save_path = os.path.join(output_folder, relative_path)
-                #os.makedirs(save_path, exist_ok=True)
+                os.makedirs(save_path, exist_ok=True)
 
-                output_file_path = os.path.join(save_path, file)
+                functions.write_results(results_name, detected_points, save_path)
+                functions.write_config(config_name, config, save_path)
 
 
 def display_outputs_in_folder(input_folder: str, process_function: Callable, display_mode: str):

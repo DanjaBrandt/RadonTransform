@@ -1,10 +1,11 @@
-
+import os
 import argparse
 import sys
 
 from config import Config  # Import the Config class
 from radon_analysis import RadonStructureDetection
 from display_handler import DisplayHandler
+#from logger_config import setup_logger
 from utils.process_functions import process_images_in_folder, display_outputs_in_folder
 
 class MainClass:
@@ -17,7 +18,6 @@ class MainClass:
         self.process_key = process_key
         self.display_mode = display_mode
 
-
         if process_key == "radon":
             self.processor = RadonStructureDetection(config).process
 
@@ -29,6 +29,7 @@ class MainClass:
             self.processor = DisplayHandler(display_mode).display
             #self.output_folder = None
         else:
+            self.logger.error(f"Invalid process key: {process_key}")
             raise ValueError("Invalid key! Use 'radon', 'fourier', or 'display'.")
 
     def run(self, input_folder):
@@ -64,14 +65,20 @@ if __name__ == "__main__":
             input_folder="./data_test",
             display_mode="image",
             patch_size=100,
-            patch_step=100,
+            patch_step=50,
             sigma=1,
             normalize=True
         )
+    # Setup logging based on mode
+    #logger = setup_logger(args.mode)
+    #logger.info(f"Starting process in {args.mode} mode.")
 
-    config = Config(**vars(args))
+    input_config = Config(**vars(args))
     #app = MainClass(config, args.image_path)
     #app.run()
-    app = MainClass(config, args.mode, args.display_mode)
+    app = MainClass(input_config, args.mode, args.display_mode)
     app.run(args.input_folder)
+
+    #logger.info("Application finished")
+
 

@@ -18,4 +18,4 @@ __pycache__/
 Thumbs.db
 
 # Ignore test data
-.data_test/
+data_test/
