@@ -19,3 +19,9 @@ Thumbs.db
 
 # Ignore test data
 data_test/
+
+# Unpublished outputs
+outputs/radon_output_01
+
+# conversion file
+convert.py

@@ -3,7 +3,7 @@ import os
 from scipy.interpolate import interp1d
 import json
 import csv
-import copy
+from pathlib import Path
 
 
 def calculate_fwhm(x: list[float], y: list[float]) -> tuple[float, float, float, float]:
@@ -133,27 +133,34 @@ def create_circular_mask(height: int, width: int, center: tuple = None, radius: 
     return mask
 
 
-def get_unique_name(base_name: str, extension: str = None) -> str:
+def get_unique_name(base_name: str, parent_dir: str = None, extension: str = None) -> str:
     """
     Generates a unique name for a folder or file by appending numbers (_01, _02, ...).
 
+    If `parent_dir` is provided, the unique name is generated inside that directory.
+
     :param base_name: The base name (e.g., "radon_output" or "logs/radon_log").
+    :param parent_dir: Optional parent directory where the name should be checked.
     :param extension: Optional file extension (e.g., ".log"). If None, assumes it's a folder.
-    :return: A unique folder or file name.
+    :return: A unique folder or file name as a string.
     """
+
+    # Define the base path
+    base_path = Path(parent_dir) / base_name if parent_dir else Path(base_name)
+
+    # Check if the base path already exists
     if extension:
-        name = f"{base_name}{extension}"
-    else:
-        name = base_name  # Folder case
+        base_path = base_path.with_suffix(extension)  # Add extension if provided
 
-    if not os.path.exists(name):
-        return name  # If it doesn't exist, return as is
+    if not base_path.exists():
+        return str(base_path)  # Return the name if it doesn't already exist
 
+    # Generate a unique name with incremental numbers
     counter = 1
     while True:
-        new_name = f"{base_name}_{counter:02d}{extension if extension else ''}"
-        if not os.path.exists(new_name):
-            return new_name  # Return the first available unique name
+        new_path = base_path.parent / f"{base_path.stem}_{counter:02d}{base_path.suffix}"
+        if not new_path.exists():
+            return str(new_path)
         counter += 1
 
 
@@ -238,7 +245,6 @@ def find_local_extrema(data: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     second_derivative = np.diff(data)
     sign_second_derivative = np.sign(second_derivative)
     diff_sign_second_derivative = np.diff(sign_second_derivative)
-
     local_maxs = np.where(diff_sign_second_derivative < 0)[0] + 1
     local_mins = np.where(diff_sign_second_derivative > 0)[0] + 1
 

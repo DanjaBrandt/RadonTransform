@@ -4,6 +4,9 @@ import numpy as np
 from PIL import Image
 import matplotlib.pyplot as plt
 from typing import Callable
+from pathlib import Path
+import json
+import pprint
 
 #from logger_config import get_logger
 from utils import functions
@@ -66,83 +69,97 @@ def import_data(path: str, normalize: bool = True, max_value: int = 255, min_val
     return tiffarray
 
 
-def process_images_in_folder(input_folder: str, process_function: Callable, process_key: str, normalize: bool = True):
+def process_images_in_folder(
+    input_folder: str, process_function: Callable, process_key: str, normalize: bool = True
+):
     """
     Processes all images in a given folder and saves the results.
 
-    The function:
-    - Recursively scans the input folder.
-    - Opens each image using `import_data()`.
-    - Applies the specified `process_function()`.
-    - Saves the processed image to `output_folder` (if specified), maintaining folder structure.
-
     :param input_folder: The root folder containing input images.
-    :type input_folder: str
     :param process_function: A function that processes a NumPy array and returns an output.
-    :type process_function: Callable
     :param process_key: The name of the process function (Radon, Fourier...)
-    :type normalize: object
+    :param normalize: Whether to normalize the images.
     """
 
-    #root_output_folder = "outputs"
+    input_folder = Path(input_folder)
+
+    if process_key == "display":
+        process_display_mode(input_folder, process_function, normalize)
+    else:
+        process_and_save_images(input_folder, process_function, process_key, normalize)
+
+
+def process_display_mode(input_folder: Path, process_function: Callable, normalize: bool):
+    """Handles display mode: loads config and result files, then processes images accordingly."""
+
+    for root, _, _ in os.walk(input_folder):
+        root_path = Path(root)
+
+        config_file = next(root_path.glob("*config*.json"), None)
+        result_file = next(root_path.glob("*results*.json"), None)
+
+        if not config_file or not result_file:
+            print(f"Skipping {root_path}: Missing config or results JSON file.")
+            continue  # Skip folders without required files
+
+        # Load config data
+        with config_file.open("r", encoding="utf-8") as f:
+            config_data = json.load(f)
+
+        # Load results data
+        with result_file.open("r", encoding="utf-8") as f:
+            result_data = json.load(f)
+
+        # Display results
+        print("\nDisplaying results for config:\n")
+        pprint.pprint(config_data)
+
+        result_data.update(
+            {
+                "input_data_name": config_data.get("input_data_name"),
+                "input_data_path": config_data.get("input_data_path"),
+                "analysis_name": config_data.get("analysis_name"),
+            }
+        )
+
+        # Call process function with required parameters
+        process_function(result_data)
+
+
+def process_and_save_images(input_folder: Path, process_function: Callable, process_key: str, normalize: bool):
+    """Processes and saves images in a structured output folder."""
+
+    output_root = Path("outputs")
     base_output_folder = f"{process_key}_output"
-    output_folder = functions.get_unique_name(base_output_folder)
-    #output_folder = os.path.join(root_output_folder, functions.get_unique_name(base_output_folder))
-    print(output_folder)
+    output_folder = functions.get_unique_name(base_name=base_output_folder, parent_dir=output_root)
+
     for root, _, files in os.walk(input_folder):
+        root_path = Path(root)
 
         for file in files:
-            file_path = os.path.join(root, file)
-
-            # Try importing the image
-            image_array = import_data(file_path, normalize=normalize)
+            file_path = root_path / file
+            image_array = import_data(str(file_path), normalize=normalize)
             if image_array is None:
-                continue  # Skip if not a valid image
+                continue  # Skip invalid images
+
+            relative_path = root_path.relative_to(input_folder)
+            output_dir = output_folder / relative_path
+            output_dir.mkdir(parents=True, exist_ok=True)
 
             config, detected_points = process_function(image_array)
-            results_name = f"results_{os.path.splitext(file)[0]}"
-            config_name = f"config_{os.path.splitext(file)[0]}"
+            config.update(
+                {
+                    "input_data_name": file,
+                    "input_data_path": str(file_path),
+                    "analysis_name": process_key,
+                }
+            )
 
-            # Save the processed image if process_key is not display
-            if process_key != "display_input":
-                # Preserve subfolder structure
-                relative_path = os.path.relpath(root, input_folder)
-                output_dir = os.path.join(output_folder, relative_path)
-                os.makedirs(output_dir, exist_ok=True)
-                save_path = os.path.join(output_folder, relative_path)
-                os.makedirs(save_path, exist_ok=True)
+            results_name = f"results_{file_path.stem}"
+            config_name = f"config_{file_path.stem}"
 
-                functions.write_results(results_name, detected_points, save_path)
-                functions.write_config(config_name, config, save_path)
-
-
-def display_outputs_in_folder(input_folder: str, process_function: Callable, display_mode: str):
-    """
-    Displays all images in a given folder.
-
-    Parameters:
-    - input_folder (str): Folder containing images to display.
-
-    Returns:
-    - None
-    """
-    for root, _, files in os.walk(input_folder):
-        for file in files:
-            file_path = os.path.join(root, file)
-
-            # Check if it's an image
-            #if imghdr.what(file_path) is None:
-                #continue  # Skip non-image files
-
-            #BASED ON DISPLAY MODE OPEN IMAGE; OR CSV OR OTHER RESULT
-            # Load and display the image
-            image_array = import_data(file_path)
-            if image_array is None:
-                continue
-
-            plt.imshow(image_array[0], cmap="gray")  # Display first frame if multi-frame
-            plt.title(f"Displaying: {file}")
-            plt.show()
+            functions.write_results(results_name, detected_points, str(output_dir))
+            functions.write_config(config_name, config, str(output_dir))
 
 
 def get_unique_output_folder(base_name: str) -> str:

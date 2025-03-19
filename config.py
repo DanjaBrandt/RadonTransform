@@ -13,10 +13,10 @@ class Config:
         self.patch_step = kwargs.get("patch_step", 25)
         self.sigma = kwargs.get("sigma", 1)
         self.sigma_1d = kwargs.get("sigma_1d", 1)
-        self.background_pixel_cutoff = kwargs.get("background_pixel_cutoff", 80)
+        self.background_pixel_cutoff = kwargs.get("background_pixel_cutoff", 90)
         self.peak_threshold = kwargs.get("peak_threshold", 0.95)
         self.peak_prominence = kwargs.get("peak_prominence", 0.10)
-        self.distance_threshold = kwargs.get("distance_threshold", 10)
+        self.distance_threshold = kwargs.get("distance_threshold", 20)
         self.angle_threshold = kwargs.get("angle_threshold", 10)
 
     def as_dict(self):

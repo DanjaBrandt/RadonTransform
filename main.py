@@ -6,7 +6,7 @@ from config import Config  # Import the Config class
 from radon_analysis import RadonStructureDetection
 from display_handler import DisplayHandler
 #from logger_config import setup_logger
-from utils.process_functions import process_images_in_folder, display_outputs_in_folder
+from utils.process_functions import process_images_in_folder
 
 class MainClass:
     """
@@ -18,25 +18,19 @@ class MainClass:
         self.process_key = process_key
         self.display_mode = display_mode
 
-        if process_key == "radon":
-            self.processor = RadonStructureDetection(config).process
-
-        #elif key == "fourier":
-            #self.processor = FourierTransform.process
-            #self.output_folder = "fourier"
-        elif process_key == "display_input":
-            #print('MAIN DISPLAY MODE', )
+        if process_key == "display":
             self.processor = DisplayHandler(display_mode).display
-            #self.output_folder = None
+        elif process_key == "radon":
+            self.processor = RadonStructureDetection(config).process
+        #elif process_key == "fourier":
+            #self.processor = FourierTransform.process
         else:
-            self.logger.error(f"Invalid process key: {process_key}")
-            raise ValueError("Invalid key! Use 'radon', 'fourier', or 'display'.")
+            # self.logger.error(f"Invalid process key: {process_key}")
+            raise ValueError(f"Unknown process_key: {process_key}")
 
     def run(self, input_folder):
-        if self.process_key == "display_outputs":
-            display_outputs_in_folder(input_folder, self.processor, self.display_mode)
-        else:
-            process_images_in_folder(input_folder, self.processor, self.process_key)
+
+        process_images_in_folder(input_folder, self.processor, self.process_key, self.display_mode)
 
 
 def get_args():
@@ -61,12 +55,12 @@ if __name__ == "__main__":
         args = get_args()
     else:  # No CLI arguments, use default values
         args = argparse.Namespace(
-            mode="radon",
-            input_folder="./data_test",
+            mode="display",
+            input_folder="./outputs/radon_output_00/real/THG",
             display_mode="image",
-            patch_size=100,
-            patch_step=50,
-            sigma=1,
+            patch_size=40,
+            patch_step=20,
+            sigma=2,
             normalize=True
         )
     # Setup logging based on mode

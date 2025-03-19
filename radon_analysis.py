@@ -14,7 +14,7 @@ import pprint #remove
 class RadonStructureDetection:
     def __init__(self, config):
         self.config = config
-        self._background_threshold_value = None
+        self._background_threshold_value = 30#None
 
     def _to_dict(self):
         """Returns a dictionary with all config parameters plus the threshold value."""
@@ -92,7 +92,6 @@ class RadonStructureDetection:
         """Computes the Full Width at Half Maximum (FWHM) of the strongest peak in the given plot."""
 
         # Smooth the data
-        #print(f"Processing curve with sigma={self.config.sigma_1d}")
         data_1d = self._apply_gaussian_filter(max_projection_plot, sigma=self.config.sigma_1d).flatten()
 
         # Find extrema and boundaries
@@ -104,10 +103,16 @@ class RadonStructureDetection:
         # Calculate and return the FWHM
         return self._compute_fwhm(peak_values)
 
-    def _find_peak_and_boundaries(self, data_1d):
+    @staticmethod
+    def _find_peak_and_boundaries(data_1d):
         """Finds the highest peak and its surrounding boundaries."""
         local_max, local_min = functions.find_local_extrema(data_1d)
         local_min = np.concatenate(([0], local_min, [len(data_1d) - 1]))
+
+        if local_max.size == 0:
+            local_max = [np.argmax(data_1d)]
+            #plt.plot(data_1d)
+            #plt.show()
 
         max_peak_idx = max(local_max, key=lambda i: data_1d[i])
         left_bound, right_bound = functions.find_bounds(max_peak_idx, local_min)
@@ -193,8 +198,8 @@ class RadonStructureDetection:
         - tuple: (p1, p2) if the profile meets the threshold, otherwise None.
         """
 
-        y1, x1 = map(int, p1)  # Convert p1 (x, y) → (y1, x1)
-        y2, x2 = map(int, p2)  # Convert p2 (x, y) → (y2, x2)
+        x1, y1 = map(int, p1)  # Convert p1 (x, y) → (y1, x1)
+        x2, y2 = map(int, p2)  # Convert p2 (x, y) → (y2, x2)
 
         # Generate pixel indices along the line
         rr, cc = line(y1, x1, y2, x2)
@@ -206,9 +211,10 @@ class RadonStructureDetection:
         for y, x in zip(rr, cc):
             # Ensure coordinates are within image bounds before accessing pixel values
             if 0 <= x < underlying_image.shape[1] and 0 <= y < underlying_image.shape[0]:
-                if underlying_image[y, x] <= self._background_threshold_value:
-                    return p1, (last_valid_y, last_valid_x)
 
+                if underlying_image[y, x] <= self._background_threshold_value:
+                    # return p1, (last_valid_y, last_valid_x)
+                    return None
             last_valid_y, last_valid_x = y, x
         return p1, p2
 
@@ -344,7 +350,7 @@ class RadonStructureDetection:
 
         used_config = self._to_dict()
         # Reset the threshold after each image
-        self._background_threshold_value = None
+        #self._background_threshold_value = None
 
         plot_detected_features(filtered_image, results)
         return used_config, results
