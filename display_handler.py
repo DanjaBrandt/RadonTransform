@@ -46,13 +46,14 @@ def _display_image(results_dict: dict):
         # Compute endpoints for the detected line (blue)
         start, end = functions.compute_endpoints(center, 10, angle_radians)
         plt.plot([start[1], end[1]], [start[0], end[0]], linewidth=2, color='b')
+        #plt.plot([point["y_start"], point["y_end"]], [point["x_start"], point["x_end"]], linewidth=2, color='b')
 
         # Mark the detected center with a small circle
         plt.plot(center[1], center[0], marker='o', markersize=2, color='cyan')
 
         # Compute endpoints for the width indicator (red, perpendicular to main line)
-        # wstart, wend = functions.compute_endpoints(center, int(width), angle_radians + np.pi / 2)
-        # plt.plot([wstart[1], wend[1]], [wstart[0], wend[0]], linewidth=1, color='r')
+        wstart, wend = functions.compute_endpoints(center, int(width), angle_radians + np.pi / 2)
+        plt.plot([wstart[1], wend[1]], [wstart[0], wend[0]], linewidth=1, color='r')
     plt.show()
 
 
@@ -89,6 +90,6 @@ def _display_polar_histogram(results_dict: dict):
     ax.set_theta_direction(1)  # Counterclockwise
     ax.set_thetamin(0)
     ax.set_thetamax(180)
-
+    #ax.set_rlim(0, 40)
     plt.title(f"Polar Representation of Angle Distribution – {results_dict['input_data_name']}")
     plt.show()

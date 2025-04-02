@@ -14,7 +14,7 @@ import pprint #remove
 class RadonStructureDetection:
     def __init__(self, config):
         self.config = config
-        self._background_threshold_value = 30#None
+        self._background_threshold_value = None
 
     def _to_dict(self):
         """Returns a dictionary with all config parameters plus the threshold value."""
@@ -283,7 +283,7 @@ class RadonStructureDetection:
             if i in used:
                 continue
             neighbors = [total_points[j] for j in kdtree.query_ball_point((point['center'][1], point['center'][0]),
-                                                                          self.config.distance_threshold)
+                                                                          int(point['width']) + self.config.distance_tolerance)
                          if j != i and j not in used and min(
                     abs(point['angle_radians'] - total_points[j]['angle_radians']),
                     np.pi - abs(point['angle_radians'] - total_points[j]['angle_radians'])) < np.radians(
@@ -296,7 +296,6 @@ class RadonStructureDetection:
     def _process_single_patch(self, sub_image, x, y, circular_mask, final_results):
         """Processes a single image patch."""
         intensity_percentage = self._calculate_signal(sub_image)
-        #print(f"Patch ({x}, {y}): Intensity = {intensity_percentage:.2f}%")  # REMOVE LATER
 
         if intensity_percentage < self.config.background_pixel_cutoff:
             self.display_patches.append(sub_image)
@@ -307,9 +306,10 @@ class RadonStructureDetection:
             if sinogram_peaks:
                 self._process_sinogram_peaks(sub_image, sinogram_peaks, x, y, final_results)
             else:
-                print("No peaks detected.")
-        else:
-            print(f"Subimage ({x}, {y}) mostly empty.")
+                print(f"No peaks detected for subimage ({x}, {y}).")
+
+        #else:
+            # print(f"Subimage ({x}, {y}) mostly empty.")
 
     def _process_patches(self, filtered_image):
         """Extracts patches, applies a circular mask, and stores the patch if it meets the threshold."""
@@ -350,7 +350,7 @@ class RadonStructureDetection:
 
         used_config = self._to_dict()
         # Reset the threshold after each image
-        #self._background_threshold_value = None
+        self._background_threshold_value = None
 
         plot_detected_features(filtered_image, results)
         return used_config, results

@@ -8,7 +8,6 @@ from pathlib import Path
 import json
 import pprint
 
-#from logger_config import get_logger
 from utils import functions
 
 def import_data(path: str, normalize: bool = True, max_value: int = 255, min_value: int = 0) -> np.ndarray:
@@ -70,8 +69,7 @@ def import_data(path: str, normalize: bool = True, max_value: int = 255, min_val
 
 
 def process_images_in_folder(
-    input_folder: str, process_function: Callable, process_key: str, normalize: bool = True
-):
+    input_folder: str, process_function: Callable, process_key: str, normalize: bool = True, save: bool = True):
     """
     Processes all images in a given folder and saves the results.
 
@@ -86,47 +84,51 @@ def process_images_in_folder(
     if process_key == "display":
         process_display_mode(input_folder, process_function, normalize)
     else:
-        process_and_save_images(input_folder, process_function, process_key, normalize)
+        process_and_save_images(input_folder, process_function, process_key, normalize, save)
 
 
 def process_display_mode(input_folder: Path, process_function: Callable, normalize: bool):
     """Handles display mode: loads config and result files, then processes images accordingly."""
 
-    for root, _, _ in os.walk(input_folder):
+    for root, _, files in os.walk(input_folder):
         root_path = Path(root)
 
-        config_file = next(root_path.glob("*config*.json"), None)
-        result_file = next(root_path.glob("*results*.json"), None)
+        config_files = list(root_path.glob("*config*.json"))
+        result_files = list(root_path.glob("*results*.json"))
 
-        if not config_file or not result_file:
+        if not config_files or not result_files:
             print(f"Skipping {root_path}: Missing config or results JSON file.")
             continue  # Skip folders without required files
 
-        # Load config data
-        with config_file.open("r", encoding="utf-8") as f:
-            config_data = json.load(f)
+        # Iterate over each pair of config and result files
+        for config_file, result_file in zip(config_files, result_files):
+            print(f"Processing config: {config_file.name}, result: {result_file.name}")
 
-        # Load results data
-        with result_file.open("r", encoding="utf-8") as f:
-            result_data = json.load(f)
+            # Load config data
+            with config_file.open("r", encoding="utf-8") as f:
+                config_data = json.load(f)
 
-        # Display results
-        print("\nDisplaying results for config:\n")
-        pprint.pprint(config_data)
+            # Load results data
+            with result_file.open("r", encoding="utf-8") as f:
+                result_data = json.load(f)
 
-        result_data.update(
-            {
-                "input_data_name": config_data.get("input_data_name"),
-                "input_data_path": config_data.get("input_data_path"),
-                "analysis_name": config_data.get("analysis_name"),
-            }
-        )
+            # Display results
+            print("\nDisplaying results for config:\n")
+            pprint.pprint(config_data)
 
-        # Call process function with required parameters
-        process_function(result_data)
+            result_data.update(
+                {
+                    "input_data_name": config_data.get("input_data_name"),
+                    "input_data_path": config_data.get("input_data_path"),
+                    "analysis_name": config_data.get("analysis_name"),
+                }
+            )
+
+            # Call process function with the required parameters
+            process_function(result_data)
 
 
-def process_and_save_images(input_folder: Path, process_function: Callable, process_key: str, normalize: bool):
+def process_and_save_images(input_folder: Path, process_function: Callable, process_key: str, normalize: bool, save=True):
     """Processes and saves images in a structured output folder."""
 
     output_root = Path("outputs")
@@ -144,7 +146,6 @@ def process_and_save_images(input_folder: Path, process_function: Callable, proc
 
             relative_path = root_path.relative_to(input_folder)
             output_dir = output_folder / relative_path
-            output_dir.mkdir(parents=True, exist_ok=True)
 
             config, detected_points = process_function(image_array)
             config.update(
@@ -158,8 +159,10 @@ def process_and_save_images(input_folder: Path, process_function: Callable, proc
             results_name = f"results_{file_path.stem}"
             config_name = f"config_{file_path.stem}"
 
-            functions.write_results(results_name, detected_points, str(output_dir))
-            functions.write_config(config_name, config, str(output_dir))
+            if save:
+                output_dir.mkdir(parents=True, exist_ok=True)
+                functions.write_results(results_name, detected_points, str(output_dir))
+                functions.write_config(config_name, config, str(output_dir))
 
 
 def get_unique_output_folder(base_name: str) -> str:

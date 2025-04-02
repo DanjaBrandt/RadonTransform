@@ -1,0 +1,15 @@
+{
+    "patch_size": 40,
+    "patch_step": 20,
+    "sigma": 2,
+    "sigma_1d": 1,
+    "background_pixel_cutoff": 90,
+    "peak_threshold": 0.95,
+    "peak_prominence": 0.1,
+    "distance_threshold": 20,
+    "angle_threshold": 10,
+    "background_threshold_value": 30,
+    "input_data_name": "mixed.png",
+    "input_data_path": "data_test\\mixed.png",
+    "analysis_name": "radon"
+}

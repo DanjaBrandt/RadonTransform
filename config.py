@@ -16,7 +16,7 @@ class Config:
         self.background_pixel_cutoff = kwargs.get("background_pixel_cutoff", 90)
         self.peak_threshold = kwargs.get("peak_threshold", 0.95)
         self.peak_prominence = kwargs.get("peak_prominence", 0.10)
-        self.distance_threshold = kwargs.get("distance_threshold", 20)
+        self.distance_tolerance = kwargs.get("distance_tolerance", 5)
         self.angle_threshold = kwargs.get("angle_threshold", 10)
 
     def as_dict(self):

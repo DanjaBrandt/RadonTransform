@@ -22,6 +22,10 @@ data_test/
 
 # Unpublished outputs
 outputs/radon_output_01
+#outputs/radon_output_02
 
 # conversion file
 convert.py
+
+# logger file
+logger_config.py
