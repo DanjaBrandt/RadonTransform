@@ -19,13 +19,17 @@ Thumbs.db
 
 # Ignore test data
 data_test/
+bon/
 
 # Unpublished outputs
+outputs/radon_output
 outputs/radon_output_01
-#outputs/radon_output_02
+outputs/radon_output_02
+outputs/radon_output_03
 
 # conversion file
-convert.py
+src/radon_transform/convert.py
 
 # logger file
-logger_config.py
+src/radon_transform/logger_config.py
+src/radon_transform/coregistered_display.py

@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+from matplotlib.widgets import Slider, Button
 import numpy as np
 from scipy import ndimage
 from skimage.transform import radon
@@ -7,8 +8,6 @@ from scipy.signal import find_peaks
 from scipy.spatial import KDTree
 
 from utils import functions
-
-import pprint #remove
 
 
 class RadonStructureDetection:
@@ -51,12 +50,48 @@ class RadonStructureDetection:
     @staticmethod
     def _get_user_selected_points(img_array):
         """Displays image and allows user to click two points."""
-        plt.imshow(img_array, cmap='gray')
-        plt.title("Click two points: Top-Left & Bottom-Right")
+        fig, ax = plt.subplots()
+        plt.subplots_adjust(bottom=0.25)
+        im = ax.imshow(img_array, cmap='gray', vmin=img_array.min(), vmax=img_array.max())
+        plt.title("Click two points: Top-Left & Bottom-Right. Adjust contrast if needed")
         plt.axis("on")
 
-        points = plt.ginput(2, timeout=30)
-        plt.close()
+        # Add contrast adjustment slider
+        ax_contrast = plt.axes([0.25, 0.1, 0.65, 0.03], facecolor='lightgoldenrodyellow')
+        contrast_slider = Slider(ax_contrast, 'Contrast', 0, 1.0, valinit=1.0)
+
+        def update(val):
+            contrast = contrast_slider.val
+            im.set_clim(vmin=img_array.min() * contrast, vmax=img_array.max() * contrast)
+            fig.canvas.draw_idle()
+
+        # Connect slider to update function
+        contrast_slider.on_changed(update)
+
+        #plt.imshow(img_array, cmap='gray')
+        #plt.title("Click two points: Top-Left & Bottom-Right")
+        #plt.axis("on")
+
+        #points = plt.ginput(2, timeout=30)
+        #plt.close()
+
+        # Add a button to confirm selection
+        ax_button = plt.axes([0.4, 0.0, 0.2, 0.075])  # Position: [left, bottom, width, height]
+        select_button = Button(ax_button, 'Select Points')
+
+        # Variable to store points
+        points = []
+
+        # Function to handle button click
+        def on_select(event):
+            nonlocal points
+            fig.canvas.draw_idle()
+            points = plt.ginput(2, timeout=30)
+            plt.close()
+
+        select_button.on_clicked(on_select)
+
+        plt.show()
 
         if len(points) < 2:
             print("Region selection was not completed.")
@@ -278,7 +313,7 @@ class RadonStructureDetection:
 
         kdtree, point_coords = KDTree([(p['center'][1], p['center'][0]) for p in total_points]), []
         grouped, used = [], set()
-
+        '''
         for i, point in enumerate(total_points):
             if i in used:
                 continue
@@ -289,7 +324,34 @@ class RadonStructureDetection:
                     np.pi - abs(point['angle_radians'] - total_points[j]['angle_radians'])) < np.radians(
                     self.config.angle_threshold)]
             [used.add(total_points.index(n)) for n in neighbors]
-            grouped.append(combine_group([point] + neighbors))
+            grouped.append(combine_group([point] + neighbors))'''
+        # New grouping function need to debug
+        for i, point in enumerate(total_points):
+            if i in used:
+                continue
+
+            # Find neighboring indices
+            neighbor_indices = kdtree.query_ball_point(
+                (point['center'][1], point['center'][0]),
+                int(point['width']) + self.config.distance_tolerance
+            )
+
+            # Filter based on angle threshold and usage
+            neighbors = []
+            for j in neighbor_indices:
+                if j == i or j in used:
+                    continue
+                angle_diff = abs(point['angle_radians'] - total_points[j]['angle_radians'])
+                angle_diff = min(angle_diff, np.pi - angle_diff)
+                if angle_diff < np.radians(self.config.angle_threshold):
+                    neighbors.append(j)
+
+            # Mark all used (including self)
+            used.update(neighbors + [i])
+
+            # Combine group by index
+            group = [total_points[k] for k in [i] + neighbors]
+            grouped.append(combine_group(group))
 
         return grouped
 
@@ -305,8 +367,8 @@ class RadonStructureDetection:
 
             if sinogram_peaks:
                 self._process_sinogram_peaks(sub_image, sinogram_peaks, x, y, final_results)
-            else:
-                print(f"No peaks detected for subimage ({x}, {y}).")
+            #else:
+                #print(f"No peaks detected for subimage ({x}, {y}).")
 
         #else:
             # print(f"Subimage ({x}, {y}) mostly empty.")
@@ -352,7 +414,9 @@ class RadonStructureDetection:
         # Reset the threshold after each image
         self._background_threshold_value = None
 
-        plot_detected_features(filtered_image, results)
+        #print(results)
+
+        #plot_detected_features(filtered_image, results)
         return used_config, results
 
     def process(self, image):
@@ -392,7 +456,10 @@ def plot_detected_features(image, final_results):
         image (np.array): The image to display.
         final_results (list): List of detected feature dictionaries containing center, angle, and width.
     """
-    plt.imshow(image, cmap='gray')  # Display the image
+    counts, _ = np.histogram(image, bins=10)
+    contrast_value = (np.argmax(counts) + 1) * 50
+
+    plt.imshow(image, cmap='gray', vmax=contrast_value)  # Display the image
     plt.axis('off')
 
     for idx, point in enumerate(final_results):
