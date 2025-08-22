@@ -18,18 +18,28 @@ __pycache__/
 Thumbs.db
 
 # Ignore test data
-data_test/
+applications/01_coregisterd_data/01_data/
 bon/
 
 # Unpublished outputs
-outputs/radon_output
-outputs/radon_output_01
-outputs/radon_output_02
-outputs/radon_output_03
+outputs
+applications/01_coregisterd_data/01_outputs/01_radon_output_00
 
 # conversion file
-src/radon_transform/convert.py
+src/convert.py
 
 # logger file
-src/radon_transform/logger_config.py
-src/radon_transform/coregistered_display.py
+src/logger_config.py
+
+# old files
+src/coregistered_display.py
+src/display_handler.py
+src/growing_plate_data.py
+src/main.py
+
+# Unpublished data
+
+applications/01_coregisterd_data
+applications/02_growing_plate/02_data
+applications/02_growing_plate/02_outputs
+applications/02_growing_plate/02_masks

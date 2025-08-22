@@ -1,5 +1,6 @@
 import pprint
 
+
 class Config:
     """
     Configuration class for Radon Transform analysis.
@@ -26,4 +27,3 @@ class Config:
     def __repr__(self):
         """Returns a formatted string representation of the configuration."""
         return f"\n{pprint.pformat(self.__dict__)}"
-

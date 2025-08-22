@@ -9,7 +9,7 @@
     "distance_threshold": 20,
     "angle_threshold": 10,
     "background_threshold_value": 30,
-    "input_data_name": "SHG.tif",
-    "input_data_path": "data\\real\\SHG.tif",
+    "input_data_name": "2PM.tif",
+    "input_data_path": "00_data\\real\\2PM.tif",
     "analysis_name": "radon"
 }

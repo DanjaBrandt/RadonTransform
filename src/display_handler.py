@@ -1,8 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from utils import functions
-
-from utils import process_functions
+from src.radon_transform_algorithm.utils import functions, process_functions
 
 
 class DisplayHandler:
@@ -11,28 +9,27 @@ class DisplayHandler:
 
     def display(self, results_dict: dict):
         """
-        Displays an image using Matplotlib.
+        Displays results based on the chosen display_mode.
 
-        :param image_array: Image data as a NumPy array
-        :type image_array: np.ndarray
         :param results_dict: Dictionary containing result data
         :type results_dict: dict
         """
-        if self.display_mode == "image":
-            self._display_image(results_dict)
-        elif self.display_mode == "polar_histogram":
-            self._display_polar_histogram(results_dict)
-        elif self.display_mode == "polar_histogram_over_days":
-            self._display_polar_histogram_over_days(results_dict)
-        elif self.display_mode == "widths":
-            self._display_widths_distribution(results_dict)
-        elif self.display_mode == "widths_over_days":
-            self._display_widths_distribution_over_days(results_dict)
+        mode_map = {
+            "image": self._display_image,
+            "polar_histogram": self._display_polar_histogram,
+            "polar_histogram_over_days": self._display_polar_histogram_over_days,
+            "widths": self._display_widths_distribution,
+            "widths_over_days": self._display_widths_distribution_over_days,
+        }
+
+        display_function = mode_map.get(self.display_mode)
+        if display_function:
+            display_function(results_dict)
         else:
             print(f"Display mode '{self.display_mode}' is not supported yet.")
 
     def _display_image(self, results_dict: dict):
-        """Helper function to display an image."""
+        """Helper function to display an image with detected lines and widths."""
         image_path = results_dict.get("input_data_path")
         image_array = process_functions.import_data(str(image_path))
         if image_array is None:
@@ -44,28 +41,40 @@ class DisplayHandler:
         plt.imshow(image_array[0], cmap='gray', vmax=contrast_value)  # Assuming grayscale images
         plt.axis("off")  # Hide axes for better visualization
 
-        for idx, point in enumerate(results_dict["results"]):
-            center = (point["x_center"], point["y_center"])
-            angle_radians = point["angle_radians"]
-            width = point["width"]
+        results = results_dict.get("results", [])
+        if not results:
+            print("No detection results found in results_dict.")
+        else:
+            for idx, point in enumerate(results):
+                center = (point["x_center"], point["y_center"])
+                angle_radians = point["angle_radians"]
+                width = point["width"]
 
-            # Compute endpoints for the detected line (blue)
-            start, end = functions.compute_endpoints(center, 10, angle_radians)
-            plt.plot([start[1], end[1]], [start[0], end[0]], linewidth=2, color='b')
-            # plt.plot([point["y_start"], point["y_end"]], [point["x_start"], point["x_end"]], linewidth=2, color='b')
+                # Compute endpoints for the detected line (blue)
+                start, end = functions.compute_endpoints(center, 10, angle_radians)
+                plt.plot([start[1], end[1]], [start[0], end[0]], linewidth=2, color='b')
+                # plt.plot([point["y_start"], point["y_end"]], [point["x_start"], point["x_end"]], linewidth=2, color='b')
 
-            # Mark the detected center with a small circle
-            plt.plot(center[1], center[0], marker='o', markersize=2, color='cyan')
+                # Mark the detected center with a small circle
+                plt.plot(center[1], center[0], marker='o', markersize=2, color='cyan')
 
-            # Compute endpoints for the width indicator (red, perpendicular to main line)
-            wstart, wend = functions.compute_endpoints(center, int(width), angle_radians + np.pi / 2)
-            plt.plot([wstart[1], wend[1]], [wstart[0], wend[0]], linewidth=1, color='r')
+                # Compute endpoints for the width indicator (red, perpendicular to main line)
+                wstart, wend = functions.compute_endpoints(center, int(width), angle_radians + np.pi / 2)
+                plt.plot([wstart[1], wend[1]], [wstart[0], wend[0]], linewidth=1, color='r')
 
         plt.tight_layout()
+        plt.show()
 
     def _display_polar_histogram(self, results_dict: dict):
+        """Displays a polar histogram of angle distributions."""
+
+        results = results_dict.get("results", [])
+        if not results:
+            print("No angle data found in results_dict.")
+            return
+
         # Extract angle radians
-        angles_deg = [entry["angle_degree"] for entry in results_dict["results"]]
+        angles_deg = [entry["angle_degree"] for entry in results]
 
         # Create bins for histogram
         num_bins = 10  # Adjust based on desired bin size
@@ -73,8 +82,6 @@ class DisplayHandler:
 
         # Create histogram
         counts, _ = np.histogram(angles_deg, bins=bins)
-        # print('bins', bins)
-        # print('counts', counts)
         bin_centers = np.radians(bins[:-1] + np.diff(bins) / 2)
         rad_bins = np.radians(bins)
 
@@ -96,10 +103,10 @@ class DisplayHandler:
         ax.set_theta_direction(1)  # Counterclockwise
         ax.set_thetamin(0)
         ax.set_thetamax(180)
-        # ax.set_rlim(0, 40)
+
         plt.title(f"Polar Representation of Angle Distribution – {results_dict['input_data_name']}")
         plt.tight_layout()
-        # plt.show()
+        plt.show()
 
     def _display_polar_histogram_over_days(self, results_dict: dict):
         num_bins = 10  # Adjust based on desired bin size

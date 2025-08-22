@@ -6,8 +6,8 @@ import seaborn as sns
 import pandas as pd
 from pathlib import Path
 
-from utils import functions
-from radon_analysis import RadonStructureDetection
+from src.radon_transform_algorithm.utils import functions
+from src.radon_transform_algorithm.radon_analysis import RadonStructureDetection
 from config import Config
 
 
@@ -22,7 +22,7 @@ class GrowingPlateAnalysis:
         data_dict = bone_analysis.create_data_dict(data_folder)
         # self.display_rois_subplots(data_dict)
         # self.count_signal(data_dict)
-        # signal_dict = self.analyze_signal_all(data_dict)
+
         # pprint.pprint(signal_dict)
         # self.display_signal_plot(signal_dict)
 
@@ -30,11 +30,13 @@ class GrowingPlateAnalysis:
 
         # pprint.pprint(metadata)
 
-        # radon_results = self.run_radon_analysis(data_dict)
+        radon_results = self.run_radon_analysis(data_dict)
         # print(len(radon_results))
         # self.display_rois(data_dict=data_dict, results=radon_results)
         # self.display_cortex_alignment(radon_results)
-        # points_dict = self.analyze_points_all(data_dict)
+        points_dict = self.analyze_points_all(data_dict)
+        print(points_dict)
+        print(stop)
         # self.display_points_plot(points_dict)
 
         # SINGLE ROIS
@@ -861,8 +863,8 @@ if __name__ == "__main__":
         'save': 1
     }
     radon_param = {
-        "patch_size": 20,
-        "patch_step": 10,
+        "patch_size": 200,
+        "patch_step": 200,
         "sigma": 0,
     }
     input_config = Config(**radon_param)

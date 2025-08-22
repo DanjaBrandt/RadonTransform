@@ -9,7 +9,7 @@ import json
 import pprint
 import re
 
-from src.radon_transform.utils import functions
+from . import functions
 
 
 def import_data(path: str, normalize: bool = True, max_value: int = 255, min_value: int = 0) -> np.ndarray:
@@ -45,11 +45,17 @@ def import_data(path: str, normalize: bool = True, max_value: int = 255, min_val
             else:
                 logger.info(f"{mode}: Unknown image depth for PIL type")'''
 
+            if mode.startswith('RGB'):
+                print(f"{mode}: 24-bit color imported data")
+                img = img.convert('L')
+                print("Imported RGB image converted to 8-bit grayscale image")
+
             # Create image array
             w, h = img.size
             imarray = np.array(img)
-            tiffarray = np.zeros((img.n_frames, h, w))
-            for i in range(img.n_frames):
+            n_frames = getattr(img, 'n_frames', 1)
+            tiffarray = np.zeros((n_frames, h, w))
+            for i in range(n_frames):
                 img.seek(i)
                 # Normalize the image if normalized=True
                 if normalize:
@@ -69,7 +75,107 @@ def import_data(path: str, normalize: bool = True, max_value: int = 255, min_val
 
     return tiffarray
 
+def process_images(
+        input_path: Path,
+        process_function: Callable,
+        process_key: str,
+        normalize: bool,
+        save: bool = True
+):
+    """Processes and saves images in a structured output folder.
 
+    Works with either a directory or a single image file.
+    """
+
+    input_path = Path(input_path)
+
+    # Handle prefix: works if input is a file or a folder
+    prefix = input_path.parts[0].split("_")[0]
+
+    # Build output folder name
+    output_root = Path(f"{prefix}_outputs")
+    base_output_folder = f"{prefix}_{process_key}_output"
+    output_folder = Path(functions.get_unique_name(base_name=base_output_folder, parent_dir=output_root))
+
+    # Case 1: input is a single file
+    if input_path.is_file():
+        files = [input_path]
+        root = input_path.parent
+        walk_iter = [(root, [], [input_path.name])]
+    else:
+        # Case 2: input is a directory
+        walk_iter = os.walk(input_path)
+
+    for root, _, files in walk_iter:
+        root_path = Path(root)
+
+        for file in files:
+            file_path = root_path / file
+            image_array = import_data(str(file_path), normalize=normalize)
+            if image_array is None:
+                continue  # Skip invalid images
+
+            # Preserve relative structure if input is a folder
+            relative_path = root_path.relative_to(input_path if input_path.is_dir() else root_path)
+            output_dir = output_folder / relative_path
+
+            config, detected_points = process_function(image_array)
+            config.update(
+                {
+                    "input_data_name": file,
+                    "input_data_path": str(file_path),
+                    "analysis_name": process_key,
+                }
+            )
+
+            results_name = f"results_{file_path.stem}"
+            config_name = f"config_{file_path.stem}"
+
+            if save:
+                output_dir.mkdir(parents=True, exist_ok=True)
+                functions.write_results(results_name, detected_points, str(output_dir))
+                functions.write_config(config_name, config, str(output_dir))
+
+
+def import_all_results(path: Path) -> dict:
+    """
+    Recursively builds a nested dict from folders.
+    At the last level, pairs config_*.json and results_*.json files,
+    merges them, and stores the enriched results directly (no tif filename as key).
+    """
+    path = Path(path)
+    result = {}
+    # Collect all config_*.json files
+    config_files = list(path.glob("config_*.json"))
+    # If we have config files, treat this as a leaf folder
+    if config_files:
+        # Assume only one pair per folder
+        config_file = config_files[0]
+        suffix = config_file.stem.replace("config_", "")
+        result_file = path / f"results_{suffix}.json"
+        if result_file.exists():
+            # Load config
+            with config_file.open("r", encoding="utf-8") as f:
+                config_data = json.load(f)
+            # Load results
+            with result_file.open("r", encoding="utf-8") as f:
+                result_data = json.load(f)
+            # Merge metadata from config into results
+            result_data.update(
+                {
+                    "input_data_name": config_data.get("input_data_name"),
+                    "input_data_path": config_data.get("input_data_path"),
+                    "analysis_name": config_data.get("analysis_name"),
+                }
+            )
+            return result_data
+    # Otherwise recurse into subfolders
+    for item in path.iterdir():
+        if item.is_dir():
+            result[item.name] = import_all_results(item)
+    return result
+
+######################remove#############################
 def process_images_in_folder(
         input_folder: str, process_function: Callable, process_key: str, display_mode: str, acquisition_mode: list,
         normalize: bool = True, save: bool = True):
@@ -81,7 +187,6 @@ def process_images_in_folder(
     :param process_key: The name of the process function (Radon, Fourier...)
     :param normalize: Whether to normalize the images.
     """
-
     input_folder = Path(input_folder)
 
     if process_key == "display":
@@ -89,12 +194,13 @@ def process_images_in_folder(
             process_display_mode_over_days(input_folder=input_folder, process_function=process_function,
                                            display_mode=display_mode, save=save)
         else:
+
             process_display_mode(input_folder=input_folder, process_function=process_function,
                                  display_mode=display_mode, save=save)
     elif process_key == "coregistered_display":
         if "all" in display_mode:
             process_all_coregisterd_display(input_folder=input_folder, process_function=process_function,
-                                        display_mode=display_mode, acquisition_mode=acquisition_mode, save=save)
+                                            display_mode=display_mode, acquisition_mode=acquisition_mode, save=save)
         else:
             process_coregisterd_display(input_folder=input_folder, process_function=process_function,
                                         display_mode=display_mode, acquisition_mode=acquisition_mode, save=save)
@@ -257,9 +363,8 @@ def process_coregisterd_display(input_folder: Path, process_function: Callable, 
 
 
 def process_all_coregisterd_display(input_folder: Path, process_function: Callable, display_mode: str,
-                                acquisition_mode: list,
-                                save: bool):
-
+                                    acquisition_mode: list,
+                                    save: bool):
     print(input_folder)
     print(acquisition_mode)
     base = Path(input_folder)
@@ -287,9 +392,10 @@ def process_all_coregisterd_display(input_folder: Path, process_function: Callab
                                 if result_data:
                                     total_result[top_level.name][mid_level.name][low_level.name] = result_data
 
-    #pprint.pprint(total_result)
+    # pprint.pprint(total_result)
     process_function(total_result)
-    #plt.show()
+    # plt.show()
+
 
 def load_and_update_data(config_file: Path, result_file: Path) -> dict:
     """Helper function to load and update result data with config data."""
@@ -314,12 +420,19 @@ def load_and_update_data(config_file: Path, result_file: Path) -> dict:
         return None
 
 
+'''
 def process_and_save_images(input_folder: Path, process_function: Callable, process_key: str, normalize: bool,
                             save=True):
     """Processes and saves images in a structured output folder."""
 
-    output_root = Path("outputs")
-    base_output_folder = f"{process_key}_output"
+    prefix = Path(input_folder.parts[0]).name.split("_")[0]
+
+    # Build output folder name
+    output_root = Path(f"{prefix}_outputs")
+
+    #output_root = Path("outputs")
+    base_output_folder = f"{prefix}_{process_key}_output"
+
     output_folder = functions.get_unique_name(base_name=base_output_folder, parent_dir=output_root)
 
     for root, _, files in os.walk(input_folder):
@@ -333,7 +446,6 @@ def process_and_save_images(input_folder: Path, process_function: Callable, proc
 
             relative_path = root_path.relative_to(input_folder)
             output_dir = output_folder / relative_path
-
             config, detected_points = process_function(image_array)
             config.update(
                 {
@@ -348,8 +460,10 @@ def process_and_save_images(input_folder: Path, process_function: Callable, proc
 
             if save:
                 output_dir.mkdir(parents=True, exist_ok=True)
+                print(detected_points)
                 functions.write_results(results_name, detected_points, str(output_dir))
                 functions.write_config(config_name, config, str(output_dir))
+'''
 
 
 def get_unique_output_folder(base_name: str) -> str:
@@ -357,7 +471,7 @@ def get_unique_output_folder(base_name: str) -> str:
     Checks if the output folder already exists and finds a unique name by appending numbers (_01, _02, ...).
 
     :param base_name: The base name of the folder (e.g., "radon_output")
-    :return: A unique folder name (e.g., "radon_output_01" or "radon_output_02")
+    :return: A unique folder name (e.g., "radon_output_01" or "01_radon_output_00")
     """
     if not os.path.exists(base_name):
         return base_name  # If it doesn't exist, use the base name

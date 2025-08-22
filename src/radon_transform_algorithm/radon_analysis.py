@@ -7,11 +7,19 @@ from skimage.draw import line
 from scipy.signal import find_peaks
 from scipy.spatial import KDTree
 
-from utils import functions
+from src.radon_transform_algorithm.utils import functions
 
 
 class RadonStructureDetection:
     def __init__(self, config):
+        """
+                Radon-based structure detection.
+
+                Parameters
+                ----------
+                config : Config
+                    Configuration object with parameters (sigma, thresholds, etc.)
+                """
         self.config = config
         self._background_threshold_value = None
 
@@ -49,7 +57,17 @@ class RadonStructureDetection:
 
     @staticmethod
     def _get_user_selected_points(img_array):
-        """Displays image and allows user to click two points."""
+        """
+            Display an image and let the user select two points:
+            - Top-left
+            - Bottom-right
+            Includes a contrast adjustment slider and a confirm button.
+
+            Returns
+            -------
+            points : list of tuples or None
+                [(x1, y1), (x2, y2)] if two points selected, otherwise None.
+            """
         fig, ax = plt.subplots()
         plt.subplots_adjust(bottom=0.25)
         im = ax.imshow(img_array, cmap='gray', vmin=img_array.min(), vmax=img_array.max())
@@ -67,13 +85,6 @@ class RadonStructureDetection:
 
         # Connect slider to update function
         contrast_slider.on_changed(update)
-
-        #plt.imshow(img_array, cmap='gray')
-        #plt.title("Click two points: Top-Left & Bottom-Right")
-        #plt.axis("on")
-
-        #points = plt.ginput(2, timeout=30)
-        #plt.close()
 
         # Add a button to confirm selection
         ax_button = plt.axes([0.4, 0.0, 0.2, 0.075])  # Position: [left, bottom, width, height]
@@ -101,6 +112,10 @@ class RadonStructureDetection:
     @staticmethod
     def _validate_coordinates(points):
         """Ensures that the selected coordinates are properly ordered."""
+
+        if points is None or len(points) != 2:
+            raise ValueError("Exactly two points must be provided for validation.")
+
         (x1, y1), (x2, y2) = points
         x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
 
@@ -111,20 +126,51 @@ class RadonStructureDetection:
         return (x1, y1), (x2, y2)
 
     def get_background_pixel_value(self):
-        """Public method to retrieve the stored mean pixel value."""
+        """
+            Retrieve the stored mean background pixel value.
+
+            Returns
+            -------
+            float or None
+                The background threshold value if computed, otherwise None.
+            """
         if self._background_threshold_value is None:
             print("Background pixel value has not been computed yet.")
         return self._background_threshold_value
 
     def _calculate_signal(self, image):
-        """Calculate the percentage of pixels below the background threshold."""
+        """
+            Calculate the percentage of pixels below the stored background threshold.
+
+            Parameters
+            ----------
+            image : np.ndarray
+                2D array representing the image.
+
+            Returns
+            -------
+            float
+                Percentage of pixels with intensity below the background threshold.
+            """
         nr_of_pixels = image.size
         pixels_below_threshold = np.sum(image.ravel() <= self._background_threshold_value)
         intensity_percentage = pixels_below_threshold / nr_of_pixels * 100
         return intensity_percentage
 
     def _calculate_width(self, max_projection_plot):
-        """Computes the Full Width at Half Maximum (FWHM) of the strongest peak in the given plot."""
+        """
+            Compute the Full Width at Half Maximum (FWHM) of the strongest peak in a 1D projection.
+
+            Parameters
+            ----------
+            max_projection_plot : np.ndarray
+                2D or 1D array representing the maximum projection of the image.
+
+            Returns
+            -------
+            float
+                Full Width at Half Maximum (FWHM) of the main peak.
+            """
 
         # Smooth the data
         data_1d = self._apply_gaussian_filter(max_projection_plot, sigma=self.config.sigma_1d).flatten()
@@ -135,19 +181,37 @@ class RadonStructureDetection:
         # Extract the relevant peak region
         peak_values = self._extract_peak_region(data_1d, max_peak_idx, main_min_idx, left_bound, right_bound)
 
-        # Calculate and return the FWHM
-        return self._compute_fwhm(peak_values)
+        # Compute and return FWHM
+        fwhm = self._compute_fwhm(peak_values)
+        return fwhm
 
     @staticmethod
     def _find_peak_and_boundaries(data_1d):
-        """Finds the highest peak and its surrounding boundaries."""
+        """
+            Identify the highest peak in a 1D signal and its surrounding boundaries.
+
+            Parameters
+            ----------
+            data_1d : np.ndarray
+                1D array representing the signal or projection.
+
+            Returns
+            -------
+            tuple
+                max_peak_idx : int
+                    Index of the main peak.
+                main_min_idx : int
+                    Index of the main minimum adjacent to the peak.
+                left_bound : int
+                    Left boundary index of the peak.
+                right_bound : int
+                    Right boundary index of the peak.
+            """
         local_max, local_min = functions.find_local_extrema(data_1d)
         local_min = np.concatenate(([0], local_min, [len(data_1d) - 1]))
 
         if local_max.size == 0:
             local_max = [np.argmax(data_1d)]
-            #plt.plot(data_1d)
-            #plt.show()
 
         max_peak_idx = max(local_max, key=lambda i: data_1d[i])
         left_bound, right_bound = functions.find_bounds(max_peak_idx, local_min)
@@ -157,7 +221,25 @@ class RadonStructureDetection:
 
     @staticmethod
     def _extract_peak_region(data_1d, max_peak_idx, main_min_idx, left_bound, right_bound):
-        """Extracts the peak region based on the threshold mask."""
+        """Extracts the peak region based on the threshold mask.
+            Parameters
+            ----------
+            data_1d : np.ndarray
+                1D array representing the signal.
+            max_peak_idx : int
+                Index of the main peak.
+            main_min_idx : int
+                Index of the main minimum adjacent to the peak.
+            left_bound : int
+                Left boundary index of the peak.
+            right_bound : int
+                Right boundary index of the peak.
+
+            Returns
+            -------
+            np.ndarray
+                Values of the extracted peak region.
+            """
         peak_mask = data_1d > data_1d[main_min_idx]
 
         if main_min_idx > max_peak_idx:
@@ -171,16 +253,34 @@ class RadonStructureDetection:
 
     @staticmethod
     def _compute_fwhm(peak_values):
-        """Computes the Full Width at Half Maximum (FWHM)."""
+        """Computes the Full Width at Half Maximum (FWHM).
+            Parameters
+            ----------
+            peak_values : np.ndarray
+                1D array representing the extracted peak region.
+
+            Returns
+            -------
+            float
+                FWHM of the peak.
+                """
         return functions.calculate_fwhm(np.arange(len(peak_values)), peak_values)[0]
 
     def _analyze_sinogram(self, input_sinogram):
         """
-        Analyzes a sinogram to detect peaks and extract relevant information.
+        Analyze a sinogram to detect peaks and extract relevant information.
 
-        :param input_sinogram: 2D array representing the sinogram.
-        :return: List of dictionaries containing peak details or None if no peaks are found.
-        """
+            Parameters
+            ----------
+            input_sinogram : np.ndarray
+                2D array representing the sinogram.
+
+            Returns
+            -------
+            list of dict or None
+                List of dictionaries containing peak details (position, angle, width),
+                or None if no peaks are found.
+            """
         # Compute max intensity projection and key values
         max_projection = input_sinogram.max(axis=0)
         max_sinogram_value = max_projection.max()
@@ -194,10 +294,13 @@ class RadonStructureDetection:
         peaks, _ = find_peaks(max_projection, prominence=peak_prominence, height=peak_threshold)
 
         # Handle boundary peaks efficiently
-        left_border_peak = np.argmax(max_projection[:border_limit]) if max_projection[
-                                                                       :border_limit].max() == max_sinogram_value else None
-        right_border_peak = len(max_projection) - border_limit + np.argmax(
-            max_projection[-border_limit:]) if max_projection[-border_limit:].max() == max_sinogram_value else None
+        left_border_peak = np.argmax(
+            max_projection[:border_limit]) \
+            if max_projection[:border_limit].max() == max_sinogram_value \
+            else None
+
+        right_border_peak = len(max_projection) - border_limit + np.argmax(max_projection[-border_limit:]) \
+            if max_projection[-border_limit:].max() == max_sinogram_value else None
 
         # Append detected border peaks (if any)
         if left_border_peak is not None:
@@ -222,16 +325,22 @@ class RadonStructureDetection:
 
     def _analyze_profile(self, underlying_image, p1, p2):
         """
-        Analyzes a profile along a line in the image and determines if it passes the background threshold.
+            Analyze a profile along a line in the image to determine if it stays above the background threshold.
 
-        Parameters:
-        - underlying_image (numpy.ndarray): The image in which the profile is analyzed.
-        - p1 (tuple): Starting point (x, y) of the line.
-        - p2 (tuple): Ending point (x, y) of the line.
+            Parameters
+            ----------
+            underlying_image : np.ndarray
+                Image in which the profile is analyzed.
+            p1 : tuple[int, int]
+                Starting point (x, y) of the line.
+            p2 : tuple[int, int]
+                Ending point (x, y) of the line.
 
-        Returns:
-        - tuple: (p1, p2) if the profile meets the threshold, otherwise None.
-        """
+            Returns
+            -------
+            tuple[tuple[int, int], tuple[int, int]] | None
+                Returns (p1, p2) if the profile meets the threshold; otherwise, returns None.
+            """
 
         x1, y1 = map(int, p1)  # Convert p1 (x, y) → (y1, x1)
         x2, y2 = map(int, p2)  # Convert p2 (x, y) → (y2, x2)
@@ -254,7 +363,22 @@ class RadonStructureDetection:
         return p1, p2
 
     def _process_sinogram_peaks(self, sub_image, sinogram_peaks, x, y, final_results):
-        """Analyzes peaks found in the sinogram and extracts feature points."""
+        """
+            Analyze peaks found in the sinogram and extract feature points.
+
+            Parameters
+            ----------
+            sub_image : np.ndarray
+                Image patch to analyze.
+            sinogram_peaks : list[dict]
+                List of detected peaks with sinogram information.
+            x : int
+                Top-left x-coordinate of the sub-image in the original image.
+            y : int
+                Top-left y-coordinate of the sub-image in the original image.
+            final_results : list[dict]
+                List to append computed feature points.
+            """
         for peak in sinogram_peaks:
             subimage_center = functions.convert_coord(sub_image.shape, peak["sinogram_x"], peak["sinogram_deg_angle"])
             p_start, p_end = functions.find_circle_line_intersections(
@@ -270,7 +394,24 @@ class RadonStructureDetection:
 
     @staticmethod
     def _store_results(passed_line_coords, subimage_center, x, y, peak, final_results):
-        """Stores computed patch results."""
+        """
+            Store computed patch results into the final results list.
+
+            Parameters
+            ----------
+            passed_line_coords : tuple[tuple[int, int], tuple[int, int]]
+                Start and end coordinates of the line passing the threshold.
+            subimage_center : tuple[int, int]
+                Center coordinates in the sub-image.
+            x : int
+                Top-left x-coordinate of the sub-image in the original image.
+            y : int
+                Top-left y-coordinate of the sub-image in the original image.
+            peak : dict
+                Peak information containing angle and width.
+            final_results : list[dict]
+                List to append the computed feature dictionary.
+            """
         final_center = (subimage_center[0] + y, subimage_center[1] + x)
         final_p_start = (passed_line_coords[0][1] + y, passed_line_coords[0][0] + x)
         final_p_end = (passed_line_coords[1][1] + y, passed_line_coords[1][0] + x)
@@ -367,11 +508,6 @@ class RadonStructureDetection:
 
             if sinogram_peaks:
                 self._process_sinogram_peaks(sub_image, sinogram_peaks, x, y, final_results)
-            #else:
-                #print(f"No peaks detected for subimage ({x}, {y}).")
-
-        #else:
-            # print(f"Subimage ({x}, {y}) mostly empty.")
 
     def _process_patches(self, filtered_image):
         """Extracts patches, applies a circular mask, and stores the patch if it meets the threshold."""
@@ -414,9 +550,9 @@ class RadonStructureDetection:
         # Reset the threshold after each image
         self._background_threshold_value = None
 
-        #print(results)
+        # print(results)
 
-        #plot_detected_features(filtered_image, results)
+        # plot_detected_features(filtered_image, results)
         return used_config, results
 
     def process(self, image):
@@ -424,7 +560,7 @@ class RadonStructureDetection:
         return self._process_image(image[0])
 
 
-# REMOVE WHEN DONE
+# Functions for debugging
 def show_patches(self):
     """Displays the extracted patches in a grid layout."""
 

@@ -10,6 +10,6 @@
     "angle_threshold": 10,
     "background_threshold_value": 30,
     "input_data_name": "THG.tif",
-    "input_data_path": "data\\real\\THG.tif",
+    "input_data_path": "00_data\\real\\THG.tif",
     "analysis_name": "radon"
 }

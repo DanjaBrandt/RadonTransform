@@ -151,7 +151,7 @@ def get_unique_name(base_name: str, parent_dir: str = None, extension: str = Non
     # Check if the base path already exists
     if extension:
         base_path = base_path.with_suffix(extension)  # Add extension if provided
-
+    '''
     if not base_path.exists():
         return str(base_path)  # Return the name if it doesn't already exist
 
@@ -160,6 +160,21 @@ def get_unique_name(base_name: str, parent_dir: str = None, extension: str = Non
     while True:
         new_path = base_path.parent / f"{base_path.stem}_{counter:02d}{base_path.suffix}"
         if not new_path.exists():
+            return str(new_path)
+        counter += 1'''
+    # Collect all existing siblings
+    existing = {p.name for p in base_path.parent.glob(f"{base_path.stem}*{base_path.suffix}")}
+
+    # If base path is not free, or if "_00" exists, then skip to numbering
+    if str(base_path.name) not in existing and f"{base_path.stem}_00{base_path.suffix}" not in existing:
+        return str(base_path)
+
+    # Otherwise, find the next available number
+    counter = 1
+    while True:
+        candidate = f"{base_path.stem}_{counter:02d}{base_path.suffix}"
+        new_path = base_path.parent / candidate
+        if new_path.name not in existing:
             return str(new_path)
         counter += 1
 
