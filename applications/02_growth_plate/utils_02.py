@@ -30,9 +30,9 @@ def process_display_mode_all_data(input_folder, masks_folder, process_function, 
 
     results_structure = import_all_results(input_folder)
     #pprint.pprint(results_structure)
-    print('masks_folder', masks_folder)
+    #print('masks_folder', masks_folder)
     masks_path = collect_mask_paths(masks_folder)
-    pprint.pprint(masks_path)
+    #pprint.pprint(masks_path)
 
     process_function(results_structure, masks_path)
     plt.show()

@@ -6,7 +6,7 @@ from src.radon_transform_algorithm.radon_analysis import RadonStructureDetection
 
 from utils_02 import process_data
 
-from display_handler_02 import DisplayGrowingPlate
+from display_handler_02 import DisplayGrowthPlate
 
 
 class MainClass:
@@ -37,7 +37,7 @@ class MainClass:
         self.save = kwargs.get("save", True)
 
         if process_key == "display":
-            self.processor = DisplayGrowingPlate(**kwargs).display
+            self.processor = DisplayGrowthPlate(**kwargs).display
             self.process_folder = self.result_folder
         elif process_key == "radon":
             self.processor = RadonStructureDetection(config).process
@@ -78,9 +78,9 @@ def get_args():
         type=str,
         default="image",
         choices=[
-            "images",
-            "local_alignment",
-            "angle_differences",
+            "image",
+            "detected_points",
+            "angle_alignment",
             #"widths",
             #"widths_over_days"
         ],
@@ -148,16 +148,17 @@ if __name__ == "__main__":
             mode="display",
             input_folder="02_data",
             masks_folder="02_masks",
-            result_folder="02_outputs/02_radon_output",
-            display_mode="angle_alignment",
+            result_folder="02_outputs/02_radon_output_01",
+            display_mode="detected_points",#angle_alignment, detected_points, image, angle_deviation
             group='middle',
-            mouse='m1',
-            masked_region=None,
-            patch_size=1000,
-            patch_step=500,
+            mouse='m4',
+            masked_region='inner',
+            alignment='cortex',
+            patch_size=700,
+            patch_step=350,
             sigma=1.0,
             normalize=True,
-            save=0
+            save=1
         )
 
     # Build config and run
@@ -172,6 +173,7 @@ if __name__ == "__main__":
         group=args.group,
         mouse=args.mouse,
         masked_region=args.masked_region,
+        alignment=args.alignment,
         normalize=args.normalize,
         save=args.save
     )
