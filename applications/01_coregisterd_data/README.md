@@ -168,7 +168,7 @@ The following parameters can be configured:
   - `color=True`
   
     <p align="center">
-      <img src="01_readme_imgs/output_00/widths__2PM_SHG___ll_sl___m12_sl_m10_ll___day_10__colorTrue_linesFalse.png" alt="Alt text">
+      <img src="01_readme_imgs/output_00/widths__2PM_SHG___sl_ll___m12_sl_m10_ll___day_10__colorTrue_linesFalse.png" alt="Alt text">
     </p>
   
 - **`"local_alignment"`**
