@@ -14,6 +14,7 @@ In this study, we analyzed two experimental groups of mice:
 ## Folder Structure
 
 The code expects the following folder structure:
+<pre> ```
 01_data/
 ├─ 2PM/
 │ ├─ m07_sl/
@@ -47,6 +48,7 @@ The code expects the following folder structure:
 │ │ └─ day_14/
 │ │ └─ img.tif
 │ └─ ...│
+``` </pre>
 
 ### Notes:
 
@@ -134,8 +136,10 @@ Here’s a brief overview of the available options:
   - `mouse=None` – select a specific mouse within a group (if `None`, all mice are shown).  
   - `day=None` – select a specific time point (if `None`, all available days are shown).  
   - `color=True` – if `True`, blood vessels are shown in **magenta** and collagen in **green**; if `False`, images are shown in grayscale.  
-    - `lines=False` – if `True`, the detected orientations will be overlaid on top of each image.  
-![Alt text](01_readme_imgs/output_00/images__2PM_SHG___ll_sl___m12_sl_m10_ll___day_10__colorTrue_linesFalse.png)
+  - `lines=False` – if `True`, the detected orientations will be overlaid on top of each image.  
+
+  - ![Alt text](01_readme_imgs/output_00/images__2PM_SHG___ll_sl___m12_sl_m10_ll___day_10__colorTrue_linesFalse.png)
+
 - **`"count_points"`**  
   Displays scatter plots of the number of extracted points per mouse and day, with mean values shown as lines.  
 
