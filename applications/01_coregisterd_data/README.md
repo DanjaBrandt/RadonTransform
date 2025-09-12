@@ -139,7 +139,7 @@ Here’s a brief overview of the available options:
   - `lines=False` – if `True`, the detected orientations will be overlaid on top of each image.  
 
   <p align="center">
-    <img src="01_readme_imgs/output_00/images__2PM_SHG___ll_sl___m12_sl_m10_ll___day_10__colorTrue_linesFalse.png" alt="Alt text">
+    <img src="01_readme_imgs/output_00/images__2PM_SHG___sl_ll___m12_sl_m10_ll___day_10__colorTrue_linesFalse.png" alt="Alt text">
   </p>
 
 - **`"polar_histogram"`**  
@@ -154,7 +154,7 @@ The following parameters can be configured:
   - `color=True` – if True, histograms are color-coded (magenta for blood vessels, green for collagen); if False, histograms are displayed in grayscale.
 
   <p align="center">
-    <img src="01_readme_imgs/output_00/polar_histogram__2PM_SHG___ll_sl___m12_sl_m10_ll___day_10__colorTrue_linesFalse.png" alt="Alt text">
+    <img src="01_readme_imgs/output_00/polar_histogram__2PM_SHG___sl_ll___m12_sl_m10_ll___day_10__colorTrue_linesFalse.png" alt="Alt text">
   </p>
 
 - **`"widths"`**  
